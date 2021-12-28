@@ -1,34 +1,17 @@
-import React, {useEffect, useState, useRef} from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet'
-// import {geolocated} from 'react-geolocated'
+import React, { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+import LocationMarker from "./locationMarker";
+
+import icon from "../constants";
 import pin from '../../assets/images/location-pin.svg'
-import './map.styles.scss'
+import plane from '../../assets/images/plane.svg'
 
-const DEFAULT_LONGITUDE = 21;
-const DEFAULT_LATITUDE = 44;
+import "./map.styles.scss";
 
-function MapDemo() {
-
-    const map = useMap();
-
-    const [userCurrentPosition, setUserCurrentPosition] = useState([])
-
-    // useEffect(() => {
-    //     // Get current location
-    //     // navigator.geolocation.getCurrentPosition(function(position) {
-    //     //     console.log("Latitude is :", position.coords.latitude);
-    //     //     console.log("Longitude is :", position.coords.longitude);
-
-    //     //     setUserCurrentPosition(position.coords)
-    //     //   });
-
-    //     // const { current = {} } = mapRef;
-    //     // const { leafletElement: map } = current;
-
-    // },[])
-    
-
-    const airports = [
+const airports = [
         {
             name: 'Aerodrom Beograd',
             location: [44.786568, 20.448921]
@@ -49,35 +32,78 @@ function MapDemo() {
             name: 'Aerodrom Hrvatska, Zagreb',
             location: [45.770157, 16.069389]
         }
-    ]
-
-    // console.log(userCurrentPosition.latitude)
+    ] 
    
-    return (
-        
-        <div>
-            <MapContainer center={[DEFAULT_LATITUDE, DEFAULT_LONGITUDE]} zoom={7} className='leaflet-container'>
-                <TileLayer 
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                {
-                    airports.map((airport, index) => (
-                        <Marker key={index} position={[`${airport.location[0]}`, `${airport.location[1]}`]}>
-                            <Tooltip>
-                                {airport.name}
-                            </Tooltip>
-                        </Marker>
-                    ))
-                }
-            </MapContainer>
-            <div className='bottom-menu'>
-                <button>
-                    <img src={pin} alt="pin" />
-                </button>
-            </div>
+function MapDemo() {
+
+    const [ISSlat, setISSlat] = useState(0)
+    const [ISSlng, setISSlng] = useState(0)
+
+    const getISS = async () => {
+        const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+        const data = await res.json()
+        setISSlat(data.latitude)
+        setISSlng(data.longitude )
+        console.log(data)
+    }
+    
+    useEffect(() => {
+        const interval = setInterval(() => {
+            getISS()
+           console.log('This will run every second!');
+        }, 4000);
+        return () => clearInterval(interval);
+     }, []);
+
+    // Plane Icon
+    const myIcon = new L.Icon({
+        iconUrl: plane,
+        iconRetinaUrl: plane,
+        popupAnchor: [-0, -0],
+        iconSize: [32, 45]
+    })
+
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(function(position) {
+            //   console.log("Latitude is :", position.coords.latitude + 1);
+            //   console.log("Longitude is :", position.coords.longitude + 1);
+            });
+          }
+    },[])
+
+  return (
+    <section>
+        <MapContainer
+        center={[49.1951, 16.6068]}
+        zoom={7}
+        scrollWheelZoom
+        style={{ height: "100vh" }}
+        >
+        <TileLayer
+            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <LocationMarker />
+            {
+                airports.map((airport, index) => (
+                    <Marker key={index} position={[`${airport.location[0]}`, `${airport.location[1]}`]} icon={icon}>
+                        <Tooltip>
+                            {airport.name}
+                        </Tooltip>
+                    </Marker>
+                ))
+            }
+        <Marker position={[ISSlat, ISSlng]} icon={myIcon}></Marker>
+
+        </MapContainer>
+        <div className='bottom-menu'>
+            <button>
+                <img src={pin} alt="pin" />
+            </button>
         </div>
-    )
+    </section>
+  );
 }
 
-export default MapDemo
+export default MapDemo;
